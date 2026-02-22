@@ -54,7 +54,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--nav
 
 /* TIMER COMPONENTS */
 .timer-container { display: flex; align-items: center; gap: 32px; background: var(--bg); padding: 24px; border-radius: 12px; border: 1px solid var(--border); }
-.timer-display { font-size: 48px; font-family: monospace; font-weight: 700; color: var(--navy); width: 140px; }
+.timer-display { font-size: 44px; font-family: monospace; font-weight: 700; color: var(--navy); width: 180px; }
 .timer-controls { display: flex; gap: 12px; }
 .btn-t { padding: 12px 24px; font-size: 16px; font-weight: 600; border-radius: 8px; cursor: pointer; border: none; font-family: 'Inter', sans-serif; transition: 0.1s;}
 .btn-start { background: var(--blue); color: white; }
@@ -140,7 +140,7 @@ select.moca-v-sel { padding: 8px 12px; border-radius: 8px; border: 2px solid var
         <em>* Start timing on "Begin". Stop timing when they reach "25". Point out errors immediately to correct them (timer keeps running).</em>
       </div>
       <div class="timer-container">
-        <div class="timer-display" id="tmtA_time">0s</div>
+        <div class="timer-display" id="tmtA_time">0.00s</div>
         <div>
           <div class="timer-controls">
             <button class="btn-t btn-start" onclick="tmtA.start()">Start</button>
@@ -159,7 +159,7 @@ select.moca-v-sel { padding: 8px 12px; border-radius: 8px; border: 2px solid var
         <em>* Start timing on "Begin". Stop timing when they reach "13". Point out errors immediately.</em>
       </div>
       <div class="timer-container">
-        <div class="timer-display" id="tmtB_time">0s</div>
+        <div class="timer-display" id="tmtB_time">0.00s</div>
         <div>
           <div class="timer-controls">
             <button class="btn-t btn-start" onclick="tmtB.start()">Start</button>
@@ -352,25 +352,28 @@ function switchMoCA() {
   document.getElementById('txt-ab2').innerText = c.ab2;
 }
 
-// TIMERS
+// TIMERS - High Precision tracking using Date.now()
 class Timer {
   constructor(id) {
     this.id = id;
-    this.sec = 0;
+    this.elapsed = 0; // Total elapsed time in ms
+    this.startTime = null;
     this.intv = null;
     this.el = document.getElementById(id + '_time');
   }
   start() {
     if(this.intv) return;
+    this.startTime = Date.now() - this.elapsed;
     this.intv = setInterval(() => {
-      this.sec++;
-      if(this.sec >= 300) { // Max 5 mins
+      this.elapsed = Date.now() - this.startTime;
+      if(this.elapsed >= 300000) { // Max 5 mins (300,000 ms)
         this.stop();
-        this.el.innerText = "300s (MAX)";
+        this.elapsed = 300000;
+        this.el.innerText = "300.00s (MAX)";
       } else {
-        this.el.innerText = this.sec + 's';
+        this.el.innerText = (this.elapsed / 1000).toFixed(2) + 's';
       }
-    }, 1000);
+    }, 10);
     updateStatus();
   }
   stop() {
@@ -382,8 +385,8 @@ class Timer {
   }
   reset() {
     this.stop();
-    this.sec = 0;
-    this.el.innerText = '0s';
+    this.elapsed = 0;
+    this.el.innerText = '0.00s';
     updateStatus();
   }
 }
@@ -409,8 +412,8 @@ document.querySelectorAll('.m-cb').forEach(cb => {
 
 // STATUS TRACKING
 function updateStatus() {
-  const aDone = tmtA.sec > 0 && !tmtA.intv;
-  const bDone = tmtB.sec > 0 && !tmtB.intv;
+  const aDone = tmtA.elapsed > 0 && !tmtA.intv;
+  const bDone = tmtB.elapsed > 0 && !tmtB.intv;
   const mDone = document.getElementById('moca-done').checked;
   
   document.getElementById('stat-a').innerText = aDone ? '✅' : '❌';
@@ -457,8 +460,8 @@ function exportExcel() {
     ['Medication State', state],
     [],
     ['--- Trail Making Test ---'],
-    ['TMT Part A (Seconds)', tmtA.sec],
-    ['TMT Part B (Seconds)', tmtB.sec],
+    ['TMT Part A (Seconds)', (tmtA.elapsed / 1000).toFixed(2)],
+    ['TMT Part B (Seconds)', (tmtB.elapsed / 1000).toFixed(2)],
     [],
     ['--- MoCA Scores ---'],
     ['Version Administered', `Version ${v}`],
