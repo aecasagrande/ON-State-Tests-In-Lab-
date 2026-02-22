@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ON State Tests (In-Lab)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:wght@700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --navy: #0f172a; --navy2: #1e293b; --navy3: #334155;
+  --slate: #475569; --muted: #94a3b8; --border: #cbd5e1; --bg: #f8fafc;
+  --blue: #2563eb; --blue-l: #eff6ff; --blue-d: #1d4ed8;
+  --green: #16a34a; --green-l: #f0fdf4;
+  --amber: #d97706; --amber-l: #fffbeb;
+  --red: #dc2626; --red-l: #fef2f2;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--navy); overflow: hidden; display: flex; -webkit-font-smoothing: antialiased; }
+
+/* SIDEBAR */
+#sidebar { width: 320px; min-width: 320px; background: var(--navy); display: flex; flex-direction: column; height: 100%; overflow: hidden; flex-shrink: 0; }
+.sb-top { padding: 24px 20px 16px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.sb-logo { font-family: 'Merriweather', serif; color: #fff; font-size: 20px; font-weight: 700; line-height: 1.3; }
+.sb-sub { color: #93c5fd; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-top: 4px; }
+.sb-prog { padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,.08); }
+
+.stat-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.05); color: #e2e8f0; font-size: 14px; font-weight: 500;}
+.stat-row:last-child { border-bottom: none; }
+.stat-icon { font-size: 18px; }
+
+.sb-meta { padding: 16px 20px 24px; border-top: 1px solid rgba(255,255,255,.08); overflow-y: auto; flex: 1; }
+.meta-lbl { display: block; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; margin: 12px 0 4px; }
+.meta-inp, .meta-sel { width: 100%; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; padding: 10px 12px; color: #fff; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; margin-bottom: 8px;}
+.meta-inp:focus, .meta-sel:focus { border-color: #60a5fa; background: rgba(255,255,255,.1); }
+.btn-export { width: 100%; padding: 14px; background: var(--green); color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 16px; transition: 0.15s;}
+.btn-export:hover { background: #15803d; }
+
+/* MAIN AREA */
+#main { flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100%; }
+#topbar { background: #fff; border-bottom: 1px solid var(--border); padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.top-title { font-size: 20px; font-weight: 700; color: var(--navy); }
+.success-banner { background: var(--green); color: white; padding: 10px 20px; border-radius: 8px; font-weight: 700; font-size: 14px; display: none; }
+
+#content { flex: 1; overflow-y: auto; padding: 32px 40px; min-height: 0; }
+#content::-webkit-scrollbar { width: 8px; }
+#content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+
+/* CARDS */
+.card { background: #fff; border: 2px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 32px; max-width: 900px; }
+.card-title { font-size: 20px; font-weight: 700; color: var(--navy); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;}
+.card-desc { font-size: 14px; color: var(--slate); line-height: 1.5; margin-bottom: 20px; background: var(--blue-l); padding: 12px 16px; border-radius: 8px; border-left: 4px solid var(--blue);}
+
+/* TIMER COMPONENTS */
+.timer-container { display: flex; align-items: center; gap: 32px; background: var(--bg); padding: 24px; border-radius: 12px; border: 1px solid var(--border); }
+.timer-display { font-size: 48px; font-family: monospace; font-weight: 700; color: var(--navy); width: 140px; }
+.timer-controls { display: flex; gap: 12px; }
+.btn-t { padding: 12px 24px; font-size: 16px; font-weight: 600; border-radius: 8px; cursor: pointer; border: none; font-family: 'Inter', sans-serif; transition: 0.1s;}
+.btn-start { background: var(--blue); color: white; }
+.btn-start:active { background: var(--blue-d); }
+.btn-stop { background: var(--red); color: white; }
+.btn-stop:active { background: #b91c1c; }
+.btn-reset { background: #e2e8f0; color: var(--slate); }
+.timer-norms { font-size: 13px; color: var(--slate); margin-top: 12px; }
+.timer-norms strong { color: var(--navy2); }
+
+/* MOCA COMPONENTS */
+.moca-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+.m-sec { border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+.m-sec:last-child { border-bottom: none; padding-bottom: 0; }
+.m-sec-title { font-size: 14px; font-weight: 700; color: var(--navy3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+
+.cb-wrap { display: flex; flex-wrap: wrap; gap: 12px; }
+.cb-label { display: inline-flex; align-items: center; gap: 10px; background: #f1f5f9; border: 1px solid #e2e8f0; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 500; color: var(--navy2); transition: 0.1s; user-select: none;}
+.cb-label:hover { background: #e2e8f0; }
+.cb-label input { width: 20px; height: 20px; cursor: pointer; }
+.cb-label:has(input:checked) { background: var(--green-l); border-color: #bbf7d0; color: var(--green); }
+
+.m-inst { font-size: 13.5px; color: var(--slate); margin-bottom: 10px; font-style: italic; }
+.m-dyn { font-weight: 700; color: var(--blue-d); background: var(--blue-l); padding: 2px 6px; border-radius: 4px;}
+
+.moca-score-box { background: var(--navy2); color: white; padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-top: 24px; }
+.moca-score-val { font-size: 36px; font-weight: 700; font-family: monospace; }
+.moca-done-lbl { display: flex; align-items: center; gap: 12px; font-size: 16px; font-weight: 600; cursor: pointer; background: rgba(255,255,255,.1); padding: 12px 20px; border-radius: 8px;}
+.moca-done-lbl input { width: 24px; height: 24px; }
+
+select.moca-v-sel { padding: 8px 12px; border-radius: 8px; border: 2px solid var(--blue); font-size: 14px; font-weight: 600; color: var(--blue); outline: none; cursor: pointer; background: var(--blue-l);}
+
+@media (max-width: 900px) {
+  #sidebar { width: 260px; min-width: 260px; }
+  .timer-container { flex-direction: column; align-items: flex-start; gap: 16px; }
+}
+</style>
+</head>
+<body>
+
+<aside id="sidebar">
+  <div class="sb-top">
+    <div class="sb-logo">ON State Tests</div>
+    <div class="sb-sub">In-Lab Administration</div>
+  </div>
+  
+  <div class="sb-prog">
+    <div style="color:var(--muted); font-size:11px; font-weight:700; text-transform:uppercase; margin-bottom:12px;">Session Progress</div>
+    <div class="stat-row"><span>TMT Part A</span> <span id="stat-a" class="stat-icon">❌</span></div>
+    <div class="stat-row"><span>TMT Part B</span> <span id="stat-b" class="stat-icon">❌</span></div>
+    <div class="stat-row"><span>MoCA</span> <span id="stat-m" class="stat-icon">❌</span></div>
+  </div>
+
+  <div class="sb-meta">
+    <label class="meta-lbl">Patient ID</label>
+    <input class="meta-inp" id="mPatient" placeholder="e.g. Pt-1234">
+
+    <label class="meta-lbl">Researcher Name</label>
+    <input class="meta-inp" id="mResearcher" placeholder="Name">
+    
+    <label class="meta-lbl">Medication State</label>
+    <select class="meta-sel" id="mState">
+      <option value="ON">ON State (Verified)</option>
+      <option value="OFF">OFF State</option>
+    </select>
+    
+    <button class="btn-export" onclick="exportExcel()">⬇ Export Session Data</button>
+  </div>
+</aside>
+
+<main id="main">
+  <header id="topbar">
+    <div class="top-title">Assessments</div>
+    <div class="success-banner" id="success-banner">✅ All On-State Tests Completed!</div>
+  </header>
+
+  <div id="content">
+    
+    <div class="card">
+      <div class="card-title">Trail Making Test – Part A</div>
+      <div class="card-desc">
+        <strong>Say:</strong> "Draw a line from 1 to 2, 2 to 3, and so on... Work as quickly as you can without lifting your pen. Ready? Begin."<br>
+        <em>* Start timing on "Begin". Stop timing when they reach "25". Point out errors immediately to correct them (timer keeps running).</em>
+      </div>
+      <div class="timer-container">
+        <div class="timer-display" id="tmtA_time">0s</div>
+        <div>
+          <div class="timer-controls">
+            <button class="btn-t btn-start" onclick="tmtA.start()">Start</button>
+            <button class="btn-t btn-stop" onclick="tmtA.stop()">Stop</button>
+            <button class="btn-t btn-reset" onclick="tmtA.reset()">Reset</button>
+          </div>
+          <div class="timer-norms"><strong>Average:</strong> 29s &nbsp;|&nbsp; <strong>Deficient:</strong> > 78s &nbsp;|&nbsp; <strong>Max Rule:</strong> Stop at 5 min (300s)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Trail Making Test – Part B</div>
+      <div class="card-desc">
+        <strong>Say:</strong> "Begin at 1, draw a line to A, A to 2, 2 to B... alternate number and letter. Work as quickly as you can without lifting your pen. Ready? Begin."<br>
+        <em>* Start timing on "Begin". Stop timing when they reach "13". Point out errors immediately.</em>
+      </div>
+      <div class="timer-container">
+        <div class="timer-display" id="tmtB_time">0s</div>
+        <div>
+          <div class="timer-controls">
+            <button class="btn-t btn-start" onclick="tmtB.start()">Start</button>
+            <button class="btn-t btn-stop" onclick="tmtB.stop()">Stop</button>
+            <button class="btn-t btn-reset" onclick="tmtB.reset()">Reset</button>
+          </div>
+          <div class="timer-norms"><strong>Average:</strong> 75s &nbsp;|&nbsp; <strong>Deficient:</strong> > 273s &nbsp;|&nbsp; <strong>Max Rule:</strong> Stop at 5 min (300s)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        Montreal Cognitive Assessment (MoCA)
+        <select class="moca-v-sel" id="mocaVersion" onchange="switchMoCA()">
+          <option value="1">Version 1 (Standard)</option>
+          <option value="2">Version 2 (Alternative)</option>
+        </select>
+      </div>
+      
+      <div class="moca-grid">
+        
+        <div class="m-sec">
+          <div class="m-sec-title">1-3. Visuospatial / Executive (5 pts)</div>
+          <div class="m-inst">Trail Making <span class="m-dyn" id="txt-trail">1-A to 5-E</span>. Copy <span class="m-dyn" id="txt-shape">Cube</span>. Draw Clock at <span class="m-dyn" id="txt-clock">10 past 11</span>.</div>
+          <div class="cb-wrap">
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="visuo"> Trail Correct</label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="visuo"> Shape Correct</label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="visuo"> Clock Contour</label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="visuo"> Clock Numbers</label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="visuo"> Clock Hands</label>
+          </div>
+        </div>
+
+        <div class="m-sec">
+          <div class="m-sec-title">4. Naming (3 pts)</div>
+          <div class="cb-wrap">
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="naming"> <span id="txt-n1">Lion</span></label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="naming"> <span id="txt-n2">Rhino</span></label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="naming"> <span id="txt-n3">Camel</span></label>
+          </div>
+        </div>
+
+        <div class="m-sec">
+          <div class="m-sec-title">5. Memory (No Points Yet)</div>
+          <div class="m-inst">Read words (1/sec). Do 2 trials. Warn them to remember them for later.</div>
+          <div class="cb-wrap">
+            <span class="m-dyn" id="txt-m1">FACE</span>
+            <span class="m-dyn" id="txt-m2">VELVET</span>
+            <span class="m-dyn" id="txt-m3">CHURCH</span>
+            <span class="m-dyn" id="txt-m4">DAISY</span>
+            <span class="m-dyn" id="txt-m5">RED</span>
+          </div>
+        </div>
+
+        <div class="m-sec">
+          <div class="m-sec-title">6. Attention (6 pts)</div>
+          <div class="cb-wrap" style="margin-bottom:12px">
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="att"> Fwd: <span id="txt-af">2-1-8-5-4</span></label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="att"> Bwd: <span id="txt-ab">7-4-2</span></label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="att"> Vig. (Tap on A, max 1 error)</label>
+          </div>
+          <div class="m-inst">Serial 7s starting from <span class="m-dyn" id="txt-ser">100</span> (Score: 1 correct=1pt, 2-3 correct=2pts, 4-5 correct=3pts)</div>
+          <select class="meta-sel" style="width:200px; margin-bottom:0;" id="moca-serial" onchange="calcMoCA()">
+            <option value="0">0 points (0 correct)</option>
+            <option value="1">1 point (1 correct)</option>
+            <option value="2">2 points (2-3 correct)</option>
+            <option value="3">3 points (4-5 correct)</option>
+          </select>
+        </div>
+
+        <div class="m-sec">
+          <div class="m-sec-title">7-8. Language (3 pts)</div>
+          <div class="m-inst">Must be exact repetition. Fluency: >= 11 words starting with <span class="m-dyn" id="txt-flu">F</span>.</div>
+          <div class="cb-wrap">
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="lang"> Sent 1: <span id="txt-s1" style="font-weight:400; max-width: 250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="I only know that John is the one to help today.">I only know that John...</span></label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="lang"> Sent 2: <span id="txt-s2" style="font-weight:400; max-width: 250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="The cat always hid under the couch when dogs were in the room.">The cat always hid...</span></label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="lang"> Fluency (11+ words)</label>
+          </div>
+        </div>
+
+        <div class="m-sec">
+          <div class="m-sec-title">9. Abstraction (2 pts)</div>
+          <div class="cb-wrap">
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="abs"> <span id="txt-ab1">Train - Bicycle</span></label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="abs"> <span id="txt-ab2">Ruler - Watch</span></label>
+          </div>
+        </div>
+
+        <div class="m-sec">
+          <div class="m-sec-title">10. Delayed Recall (5 pts)</div>
+          <div class="m-inst">Score 1pt for each word freely recalled WITHOUT cues.</div>
+          <div class="cb-wrap">
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="rec"> <span id="txt-rm1">FACE</span></label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="rec"> <span id="txt-rm2">VELVET</span></label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="rec"> <span id="txt-rm3">CHURCH</span></label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="rec"> <span id="txt-rm4">DAISY</span></label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="rec"> <span id="txt-rm5">RED</span></label>
+          </div>
+        </div>
+
+        <div class="m-sec">
+          <div class="m-sec-title">11. Orientation (6 pts)</div>
+          <div class="cb-wrap">
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="ori"> Date</label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="ori"> Month</label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="ori"> Year</label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="ori"> Day</label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="ori"> Place</label>
+            <label class="cb-label"><input type="checkbox" class="m-cb" data-cat="ori"> City</label>
+          </div>
+        </div>
+
+        <div class="m-sec" style="border:none">
+          <label class="cb-label" style="background:var(--amber-l); border-color:#fde68a; color:#92400e;">
+            <input type="checkbox" id="moca-edu" onchange="calcMoCA()"> 
+            Add 1 Point (Participant has 12 years or fewer of formal education)
+          </label>
+        </div>
+
+      </div>
+
+      <div class="moca-score-box">
+        <label class="moca-done-lbl">
+          <input type="checkbox" id="moca-done" onchange="updateStatus()"> 
+          Mark MoCA Assessment Complete
+        </label>
+        <div style="text-align:right;">
+          <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#94a3b8;">Total Score</div>
+          <div class="moca-score-val"><span id="moca-tot-val">0</span> / 30</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</main>
+
+<script>
+// MOCA CONFIGURATIONS (Version 1 vs Version 2)
+const mocaConfig = {
+  1: {
+    shape: "Cube", clock: "10 past 11",
+    n1: "Lion", n2: "Rhino", n3: "Camel",
+    m1: "FACE", m2: "VELVET", m3: "CHURCH", m4: "DAISY", m5: "RED",
+    af: "2-1-8-5-4", ab: "7-4-2", ser: "100",
+    s1: "I only know that John is the one to help today.",
+    s2: "The cat always hid under the couch when dogs were in the room.",
+    flu: "F",
+    ab1: "Train - Bicycle", ab2: "Ruler - Watch"
+  },
+  2: {
+    shape: "Rectangle", clock: "5 past 4",
+    n1: "Giraffe", n2: "Bear", n3: "Hippo",
+    m1: "TRUCK", m2: "BANANA", m3: "VIOLIN", m4: "BARN", m5: "GREEN",
+    af: "3-2-9-6-5", ab: "8-5-2", ser: "90",
+    s1: "A bird can fly into closed windows when it's dark and windy.",
+    s2: "The caring grandmother sent groceries over a week ago.",
+    flu: "S",
+    ab1: "Diamond - Ruby", ab2: "Cannon - Rifle"
+  }
+};
+
+function switchMoCA() {
+  const v = document.getElementById('mocaVersion').value;
+  const c = mocaConfig[v];
+  
+  document.getElementById('txt-shape').innerText = c.shape;
+  document.getElementById('txt-clock').innerText = c.clock;
+  document.getElementById('txt-n1').innerText = c.n1;
+  document.getElementById('txt-n2').innerText = c.n2;
+  document.getElementById('txt-n3').innerText = c.n3;
+  
+  for(let i=1; i<=5; i++) {
+    document.getElementById('txt-m'+i).innerText = c['m'+i];
+    document.getElementById('txt-rm'+i).innerText = c['m'+i];
+  }
+  
+  document.getElementById('txt-af').innerText = c.af;
+  document.getElementById('txt-ab').innerText = c.ab;
+  document.getElementById('txt-ser').innerText = c.ser;
+  
+  document.getElementById('txt-s1').innerText = c.s1;
+  document.getElementById('txt-s1').title = c.s1;
+  document.getElementById('txt-s2').innerText = c.s2;
+  document.getElementById('txt-s2').title = c.s2;
+  
+  document.getElementById('txt-flu').innerText = c.flu;
+  document.getElementById('txt-ab1').innerText = c.ab1;
+  document.getElementById('txt-ab2').innerText = c.ab2;
+}
+
+// TIMERS
+class Timer {
+  constructor(id) {
+    this.id = id;
+    this.sec = 0;
+    this.intv = null;
+    this.el = document.getElementById(id + '_time');
+  }
+  start() {
+    if(this.intv) return;
+    this.intv = setInterval(() => {
+      this.sec++;
+      if(this.sec >= 300) { // Max 5 mins
+        this.stop();
+        this.el.innerText = "300s (MAX)";
+      } else {
+        this.el.innerText = this.sec + 's';
+      }
+    }, 1000);
+    updateStatus();
+  }
+  stop() {
+    if(this.intv) {
+      clearInterval(this.intv);
+      this.intv = null;
+    }
+    updateStatus();
+  }
+  reset() {
+    this.stop();
+    this.sec = 0;
+    this.el.innerText = '0s';
+    updateStatus();
+  }
+}
+
+const tmtA = new Timer('tmtA');
+const tmtB = new Timer('tmtB');
+
+// MOCA SCORING
+function calcMoCA() {
+  let tot = 0;
+  document.querySelectorAll('.m-cb:checked').forEach(() => tot++);
+  tot += parseInt(document.getElementById('moca-serial').value) || 0;
+  if(document.getElementById('moca-edu').checked) { tot += 1; }
+  if(tot > 30) tot = 30; // Max score is 30
+  
+  document.getElementById('moca-tot-val').innerText = tot;
+}
+
+// BIND CHECKBOXES
+document.querySelectorAll('.m-cb').forEach(cb => {
+  cb.addEventListener('change', calcMoCA);
+});
+
+// STATUS TRACKING
+function updateStatus() {
+  const aDone = tmtA.sec > 0 && !tmtA.intv;
+  const bDone = tmtB.sec > 0 && !tmtB.intv;
+  const mDone = document.getElementById('moca-done').checked;
+  
+  document.getElementById('stat-a').innerText = aDone ? '✅' : '❌';
+  document.getElementById('stat-b').innerText = bDone ? '✅' : '❌';
+  document.getElementById('stat-m').innerText = mDone ? '✅' : '❌';
+  
+  const banner = document.getElementById('success-banner');
+  if(aDone && bDone && mDone) {
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+// EXPORT TO EXCEL
+function exportExcel() {
+  const wb = XLSX.utils.book_new();
+  const pt = document.getElementById('mPatient').value || 'Unknown';
+  const researcher = document.getElementById('mResearcher').value || 'Unknown';
+  const state = document.getElementById('mState').value;
+  const v = document.getElementById('mocaVersion').value;
+  
+  // Collect MoCA Subscores
+  let visuo=0, naming=0, att=0, lang=0, abs=0, rec=0, ori=0;
+  document.querySelectorAll('.m-cb:checked').forEach(cb => {
+    let cat = cb.dataset.cat;
+    if(cat==='visuo') visuo++;
+    if(cat==='naming') naming++;
+    if(cat==='att') att++;
+    if(cat==='lang') lang++;
+    if(cat==='abs') abs++;
+    if(cat==='rec') rec++;
+    if(cat==='ori') ori++;
+  });
+  att += parseInt(document.getElementById('moca-serial').value) || 0;
+  let edu = document.getElementById('moca-edu').checked ? 1 : 0;
+  let mocaTot = document.getElementById('moca-tot-val').innerText;
+
+  const data = [
+    ['ON State Tests (In-Lab Administration)'], [],
+    ['Patient ID', pt],
+    ['Researcher', researcher],
+    ['Date Examined', new Date().toLocaleDateString()],
+    ['Medication State', state],
+    [],
+    ['--- Trail Making Test ---'],
+    ['TMT Part A (Seconds)', tmtA.sec],
+    ['TMT Part B (Seconds)', tmtB.sec],
+    [],
+    ['--- MoCA Scores ---'],
+    ['Version Administered', `Version ${v}`],
+    ['Visuospatial/Executive', `${visuo} / 5`],
+    ['Naming', `${naming} / 3`],
+    ['Attention', `${att} / 6`],
+    ['Language', `${lang} / 3`],
+    ['Abstraction', `${abs} / 2`],
+    ['Delayed Recall', `${rec} / 5`],
+    ['Orientation', `${ori} / 6`],
+    ['Education Adj (+1)', edu],
+    ['TOTAL MOCA SCORE', `${mocaTot} / 30`]
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [{wch:25}, {wch:20}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Results');
+  XLSX.writeFile(wb, `OnStateTests_${pt}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// Initialize
+switchMoCA();
+</script>
+</body>
+</html>
